@@ -1,0 +1,12 @@
+{
+    "target": "nombre_columna",
+    "method": "knn",
+    "preprocessing":{
+        "categorical_features":[],
+        "missing_values": "impute",
+        "impute_strategy": "mean",
+        "scaling": "max-min",
+        "text_process": "tf.idf".
+        "sampling": "undersampling"
+    }
+}
