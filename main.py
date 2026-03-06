@@ -11,7 +11,7 @@ def main():
     csv_file = sys.argv[1]
     json_file = sys.argv[2]
 
-    # Leemos el JSON para saber qué método usar
+    # Leemos el JSON para saber qué metodo usar
     with open(json_file, 'r') as f:
         config = json.load(f)
 
@@ -20,7 +20,7 @@ def main():
     if metodo == "knn":
         print("🚀 Lanzando experimento kNN...")
         # Llamamos al script de knn pasando los archivos
-        subprocess.run(["python", "knn.py", csv_file, json_file])
+        subprocess.run(["python", "KNN-train.py", csv_file, json_file])
 
     elif metodo == "arbol":
         print("🌳 Lanzando experimento Árbol de Decisión...")

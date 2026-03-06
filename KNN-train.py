@@ -4,7 +4,7 @@ Autor: Xabier Gabiña Barañano
 Script para la implementación del algoritmo kNN
 Recoge los datos de un fichero csv y los clasifica en función de los k vecinos más cercanos
 """
-
+import json
 import sys
 import sklearn as sk
 import numpy as np
@@ -12,6 +12,10 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
+
+def load_config(json_path):
+    with open(json_path, 'r') as f:
+        return json.load(f)
 
 def load_data(csv_file, config_file):
     """
@@ -40,25 +44,25 @@ def apply_preprocessing(X_train, X_test, config):
     Realiza la limpieza y normalización de datos basándose en el JSON.
     Usa el conjunto de entrenamiento para aprender los parámetros y los aplica al de test.
     """
-    # Extraemos la sección de preprocesamiento del diccionario de configuración [cite: 74]
-    prep_cfg = config['preprocessing']
+    # Extraemos la sección de preprocesamiento del diccionario de configuración
+    prep_cfg = config_file['preprocessing']
 
     # --- 1. GESTIÓN DE VALORES FALTANTES (IMPUTACIÓN) ---
-    # Leemos del JSON si queremos usar la media, mediana o moda [cite: 64, 77]
+    # Leemos del JSON si queremos usar la media, mediana o moda
     strategy = prep_cfg.get('impute_strategy', 'mean')
     imputer = SimpleImputer(strategy=strategy)
 
     # IMPORTANTE: Aprendemos la media/mediana SOLO del entrenamiento (fit)
-    # Luego aplicamos ese valor aprendido tanto a Train como a Test (transform) [cite: 65, 67]
+    # Luego aplicamos ese valor aprendido tanto a Train como a Test (transform)
     # Esto evita que los datos del test "contaminen" el entrenamiento
     X_train = imputer.fit_transform(X_train)
     X_test = imputer.transform(X_test)
 
     # --- 2. TRANSFORMACIÓN DE ESCALA (NORMALIZACIÓN) ---
-    # Mapeamos las opciones de texto del JSON a las clases reales de Scikit-Learn [cite: 78]
+    # Mapeamos las opciones de texto del JSON a las clases reales de Scikit-Learn
     scalers = {
         "z-score": StandardScaler(),  # Ajusta los datos para tener media 0 y desviación 1
-        "min-max": MinMaxScaler(),  # Escala los datos al rango [0, 1] [cite: 78]
+        "min-max": MinMaxScaler(),  # Escala los datos al rango [0, 1]
         "max-abs": MaxAbsScaler()  # Útil si los datos ya están centrados o son dispersos
     }
 
@@ -66,7 +70,7 @@ def apply_preprocessing(X_train, X_test, config):
     scaling_type = prep_cfg.get('scaling', 'z-score')
     scaler = scalers.get(scaling_type, StandardScaler())
 
-    # De nuevo: fit en entrenamiento y transform en ambos conjuntos [cite: 65, 67]
+    # De nuevo: fit en entrenamiento y transform en ambos conjuntos
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
@@ -139,7 +143,7 @@ if __name__ == "__main__":
     # Comprobamos que se han introducido los parámetros correctos
     if len(sys.argv) < 3:
         print("Error en los parámetros de entrada")
-        print("Uso: kNN.py <fichero*> <k*> <weights> <p>")
+        print("Uso: KNN-train.py <fichero*> <k*> <weights> <p>")
         sys.exit(1)
     
     # Cargamos los datos

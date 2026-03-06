@@ -1,12 +1,18 @@
 {
     "target": "nombre_columna",
     "method": "knn",
+    "hyperparameters_knn":{
+
+    },
+    "hyperparameters_tree":{
+
+    },
     "preprocessing":{
         "categorical_features":[],
         "missing_values": "impute",
         "impute_strategy": "mean",
         "scaling": "max-min",
-        "text_process": "tf.idf".
+        "text_process": "tf-idf",
         "sampling": "undersampling"
     }
 }
