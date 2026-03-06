@@ -45,7 +45,7 @@ def apply_preprocessing(X_train, X_test, config):
     Usa el conjunto de entrenamiento para aprender los parámetros y los aplica al de test.
     """
     # Extraemos la sección de preprocesamiento del diccionario de configuración
-    prep_cfg = config_file['preprocessing']
+    prep_cfg = config['preprocessing']
 
     # --- 1. GESTIÓN DE VALORES FALTANTES (IMPUTACIÓN) ---
     # Leemos del JSON si queremos usar la media, mediana o moda
