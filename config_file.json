@@ -7,8 +7,12 @@
     "hyperparameters_tree":{
 
     },
+    "hyperparameters_bayes": {
+
+    },
     "preprocessing":{
         "categorical_features":[],
+        "text_features": [],
         "missing_values": "impute",
         "impute_strategy": "mean",
         "scaling": "max-min",

@@ -1,0 +1,21 @@
+{
+    "target": "nombre_columna",     //columna a predecir
+    "method": "knn",                //knn,tree,bayes
+    "hyperparameters_knn":{         //hiperparametros de knn: k = {1,2,3,4,5,...}, p = 0/1, w = 0/1
+
+    },
+    "hyperparameters_tree":{
+
+    },
+    "hyperparameters_bayes": {
+
+    },
+    "preprocessing":{
+        "categorical_features":[], //columnas categoriales, con texto
+        "missing_values": "impute",//imputar o eliminar
+        "impute_strategy": "mean", //mean, median, mode
+        "scaling": "max-min",      //max, max-min, z-score
+        "text_process": "tf-idf",  //tf-idf,one-hot,bow
+        "sampling": "undersampling"//undersampling, oversampling
+    }
+}
