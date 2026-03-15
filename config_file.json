@@ -13,6 +13,7 @@
     "preprocessing":{
         "categorical_features":[],
         "text_features": [],
+        "boolean_features": [],
         "missing_values": "impute",
         "impute_strategy": "mean",
         "scaling": "max-min",
