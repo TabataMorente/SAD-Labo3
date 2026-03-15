@@ -11,7 +11,8 @@
 
     },
     "preprocessing":{
-        "categorical_features":[], //columnas categoriales, con texto
+        "categorical_features":[], //columnas categoriales: pasar a numeros
+        "text_features": [],       //columnas de texto, por ejemplo un mensaje.
         "missing_values": "impute",//imputar o eliminar
         "impute_strategy": "mean", //mean, median, mode
         "scaling": "max-min",      //max, max-min, z-score
