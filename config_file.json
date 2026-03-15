@@ -1,6 +1,7 @@
 {
     "target": "nombre_columna",
     "method": "knn",
+    "task": "classification",
     "hyperparameters_knn":{
 
     },
