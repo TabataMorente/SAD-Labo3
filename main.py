@@ -20,7 +20,7 @@ def main():
     if metodo == "knn":
         print("🚀 Lanzando experimento kNN...")
         # Llamamos al script de knn pasando los archivos
-        subprocess.run(["python", "KNN-train.py", csv_file, json_file])
+        subprocess.run(["python", "KNN.py", csv_file, json_file])
 
     elif metodo == "arbol":
         print("🌳 Lanzando experimento Árbol de Decisión...")

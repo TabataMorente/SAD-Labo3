@@ -192,10 +192,18 @@ def train():
     best_model = None # Aquí guardaremos el objeto del modelo ganador
     best_params = "" # Aquí guardaremos el nombre de los parámetros ganadores
 
+    # Sacamos las listas del JSON. Si no existen, ponemos unas por defecto []
+    params_cfg = config.get('hyperparameters_knn', {})
+
+    # .get(clave, valor_por_defecto)
+    lista_k = params_cfg.get('n_neighbors', [1, 3, 5])
+    lista_p = params_cfg.get('p', [1, 2])
+    lista_w = params_cfg.get('weights', ['uniform', 'distance'])
+
     # BARRIDO DE HIPERPARÁMETROS: Probamos combinaciones de k, p y pesos
-    for k in [1, 3, 5]: # k: número de vecinos a consultar
-        for p in [1, 2]: # p=1 es distancia Manhattan, p=2 es distancia Euclídea
-            for w in ['uniform', 'distance']: # w: peso de la distancia (uniforme o ponderado)
+    for k in lista_k: # k: número de vecinos a consultar
+        for p in lista_p: # p=1 es distancia Manhattan, p=2 es distancia Euclídea
+            for w in lista_w: # w: peso de la distancia (uniforme o ponderado)
 
                 # 1. ELEGIMOS EL ALGORITMO SEGÚN LA TAREA
                 if task == 'regression':
@@ -221,11 +229,35 @@ def train():
                     best_model = model
                     best_params = f"k={k}_p={p}_w={w}"
 
-    # GUARDADO FINAL: Creamos el nombre del archivo con los parámetros ganadores
+    # --- 1. EVALUACIÓN FINAL CON EL TEST SET (El "Examen de Verdad") ---
+    # Usamos el modelo que salió ganador del bucle anterior para predecir sobre datos
+    # que el modelo NO ha visto nunca (ni para entrenar ni para elegir k, p o w).
+    if task == 'regression':
+        # Si es regresión, comparamos qué tan cerca están los números predichos de los reales
+        final_test_score = r2_score(y_test, best_model.predict(X_test_p))
+        metric_name = "R2-Score"
+    else:
+        # Si es clasificación, medimos el equilibrio entre aciertos y fallos por clase
+        final_test_score = f1_score(y_test, best_model.predict(X_test_p), average='macro')
+        metric_name = "F1-Score (Macro)"
+
+    # --- 2. IMPRESIÓN DEL REPORTE POR CONSOLA ---
+    # Esto sirve para que tú (y el profesor) veáis si el modelo ha memorizado (overfitting)
+    # o si realmente ha aprendido a generalizar.
+    print(f"\n--- REPORTE DEL MODELO ---")
+    print(f"Tarea: {task.upper()}")  # Muestra si fue Clasificación o Regresión
+    print(f"Mejores Parámetros: {best_params}")  # Indica qué k, p y w ganaron
+    # Comparamos el resultado que nos dio el Dev con el que nos da el Test
+    print(f"{metric_name} en Validación (Dev): {best_score:.4f}")
+    print(f"{metric_name} en Prueba Final (Test): {final_test_score:.4f}")
+    print(f"--------------------------\n")
+
+    # --- 3. GUARDADO DEL MODELO GANADOR ---
+    # Creamos un nombre de archivo dinámico que incluya la tarea y los parámetros
     model_name = f"{task}_knn_{best_params}.sav"
-    # Guardamos el objeto del mejor modelo en un archivo para usarlo en el futuro
+    # Usamos joblib para "congelar" el objeto del modelo en el disco duro
     joblib.dump(best_model, model_name)
-    print(f"✅ Tarea de {task} completada. Modelo guardado: {model_name}")
+    print(f"✅ Modelo guardado con éxito: {model_name}")
 
 
 if __name__ == "__main__":
