@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import os  # Para manejar nombres de archivos y rutas
 import json
 import joblib  # Usamos joblib por eficiencia con arrays grandes
 import pandas as pd
@@ -29,6 +30,9 @@ def load_data(csv_file, config):
     df = pd.read_csv(csv_file) # Carga el archivo CSV en un DataFrame
     target = config['target'] # Extrae el nombre de la columna objetivo del JSON
     # Crea una lista de columnas sin el target y lo añade al final
+    if 'ID' in df.columns:
+        df = df.drop(columns=['ID'])
+        print("INFO: Columna 'ID' eliminada para mejorar el entrenamiento.")
     cols = [c for c in df.columns if c != target] + [target]
     return df[cols] # Devuelve el DataFrame ordenado
 
@@ -43,28 +47,28 @@ def apply_preprocessing(X_train, X_dev, X_test, config):
     # IMPORTANTE: Convertimos a DataFrame para poder usar nombres de columnas y tipos
     # Usamos los nombres originales de las columnas del CSV
 
-    train_df = pd.DataFrame(X_train)
-    dev_df = pd.DataFrame(X_dev)
-    test_df = pd.DataFrame(X_test)
+    train_df = pd.DataFrame(X_train).reset_index(drop=True)
+    dev_df = pd.DataFrame(X_dev).reset_index(drop=True)
+    test_df = pd.DataFrame(X_test).reset_index(drop=True)
 
     # --- 1. PREPROCESADO DE TEXTO (TF-IDF / BoW / One-Hot) ---
-    text_cols = prep_cfg.get('text_features', []) # Busca si hay columnas de texto definidas en el JSON
+    text_cols = prep_cfg.get('text_features', [])  # Busca si hay columnas de texto definidas en el JSON
     if text_cols:
-        method = prep_cfg.get('text_process', 'tf-idf') # Obtiene el metodo de procesado
+        method = prep_cfg.get('text_process', 'tf-idf')  # Obtiene el metodo de procesado
 
         # Elegimos la técnica de vectorización según indique el JSON
         if method == 'tf-idf':
             vec = TfidfVectorizer()
         elif method == 'bow':
             vec = CountVectorizer()
-        else: #Si es OneHot encoding
-            vec = OneHotEncoder(handle_unknown='ignore', sparse_output=False) # Texto como categoria
+        else:  # Si es OneHot encoding
+            vec = OneHotEncoder(handle_unknown='ignore', sparse_output=False)  # Texto como categoria
 
         for col in text_cols:
             # fit_transform aprende el vocabulario del TRAIN; transform lo aplica a DEV/TEST
-            t_train = vec.fit_transform(train_df[col].astype(str).values.reshape(-1, 1))
-            t_dev = vec.transform(dev_df[col].astype(str).values.reshape(-1, 1))
-            t_test = vec.transform(test_df[col].astype(str).values.reshape(-1, 1))
+            t_train = vec.fit_transform(train_df[col].astype(str))
+            t_dev = vec.transform(dev_df[col].astype(str))
+            t_test = vec.transform(test_df[col].astype(str))
 
             # Si el resultado es una matriz dispersa (sparse), la convertimos a densa (array)
             if hasattr(t_train, "toarray"):
@@ -72,10 +76,19 @@ def apply_preprocessing(X_train, X_dev, X_test, config):
                 t_dev = t_dev.toarray()
                 t_test = t_test.toarray()
 
+            # --- CAMBIO AQUÍ PARA EVITAR LOS AVISOS AMARILLOS ---
+            # Definimos nombres de columnas (ej: message_0, message_1...) para que Pandas no se pierda
+            col_names = [f"{col}_{i}" for i in range(t_train.shape[1])]
+
+            # Convertimos a DataFrame especificando el tipo de dato (float) desde el principio
+            t_train_df = pd.DataFrame(t_train, columns=col_names, dtype=float).reset_index(drop=True)
+            t_dev_df = pd.DataFrame(t_dev, columns=col_names, dtype=float).reset_index(drop=True)
+            t_test_df = pd.DataFrame(t_test, columns=col_names, dtype=float).reset_index(drop=True)
+
             # Borramos la columna de texto original y concatenamos las nuevas columnas numéricas
-            train_df = pd.concat([train_df.drop(columns=[col]), pd.DataFrame(t_train)], axis=1)
-            dev_df = pd.concat([dev_df.drop(columns=[col]), pd.DataFrame(t_dev)], axis=1)
-            test_df = pd.concat([test_df.drop(columns=[col]), pd.DataFrame(t_test)], axis=1)
+            train_df = pd.concat([train_df.drop(columns=[col]).reset_index(drop=True), t_train_df], axis=1)
+            dev_df = pd.concat([dev_df.drop(columns=[col]).reset_index(drop=True), t_dev_df], axis=1)
+            test_df = pd.concat([test_df.drop(columns=[col]).reset_index(drop=True), t_test_df], axis=1)
 
     # --- 2. CATEGORIALES (Reemplazo por número/Ordinal) ---
     cat_cols = prep_cfg.get('categorical_features', [])
@@ -110,11 +123,6 @@ def apply_preprocessing(X_train, X_dev, X_test, config):
         train_df = pd.DataFrame(imputer.fit_transform(train_df), columns=cols_nombres)
         dev_df = pd.DataFrame(imputer.transform(dev_df), columns=cols_nombres)
         test_df = pd.DataFrame(imputer.transform(test_df), columns=cols_nombres)
-    else:
-        # Si la opción es "eliminar", borramos filas con NaNs
-        train_df = train_df.dropna()
-        dev_df = dev_df.dropna()
-        test_df = test_df.dropna()
 
     # --- 5. GESTIÓN DE OUTLIERS (IQR Clipping) ---
     # Solo actúa en columnas numéricas
@@ -161,10 +169,22 @@ def train():
     config = load_config(sys.argv[2])  # Usamos el metodo load_config
     df = load_data(sys.argv[1], config)  # Usamos el metodo load_data (que ya ordena el target al final)
 
+    # Si en el JSON pusiste "drop", limpiamos el DataFrame entero AQUÍ
+    if config['preprocessing'].get('missing_values') == 'drop':
+        antes = len(df)
+        df = df.dropna().reset_index(drop=True)
+        print(f"INFO: Se han eliminado {antes - len(df)} filas con valores nulos.")
+
     # Separamos características (X) de la etiqueta a predecir (y)
     # Como load_data garantizó que el target es la última columna:
     X = df.iloc[:, :-1]  # "Coge todas las columnas menos la última"
     y = df.iloc[:, -1]  # "Coge solo la última columna"
+
+    if y.dtype == 'object':
+        from sklearn.preprocessing import LabelEncoder
+        le = LabelEncoder()
+        y = pd.Series(le.fit_transform(y))
+        print(f"INFO: Target codificado automáticamente: {dict(zip(le.classes_, le.transform(le.classes_)))}")
 
     # DIVISIÓN 70/15/15:
 
@@ -253,9 +273,13 @@ def train():
     print(f"--------------------------\n")
 
     # --- 3. GUARDADO DEL MODELO GANADOR ---
-    # Creamos un nombre de archivo dinámico que incluya la tarea y los parámetros
-    model_name = f"{task}_knn_{best_params}.sav"
-    # Usamos joblib para "congelar" el objeto del modelo en el disco duro
+    # Extraemos el nombre del CSV (sin la extensión .csv)
+    csv_name = os.path.basename(sys.argv[1]).split('.')[0]
+
+    # Creamos un nombre de archivo dinámico que incluya el CSV, la tarea y los parámetros
+    model_name = f"{csv_name}_{task}_knn_{best_params}.sav"
+
+    # Guardamos el modelo
     joblib.dump(best_model, model_name)
     print(f"✅ Modelo guardado con éxito: {model_name}")
 

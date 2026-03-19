@@ -21,7 +21,7 @@
         "missing_values": "impute",
         "impute_strategy": "mean",
         "scaling": "max-min",
-        "text_process": "tf-idf",
+        "text_process": "one-hot",
         "sampling": "none"
     }
 }

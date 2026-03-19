@@ -15,10 +15,10 @@
         "categorical_features":[], //columnas categoriales: pasar a numeros
         "text_features": [],       //columnas de texto, por ejemplo un mensaje.
         "boolean_features": [],    //columnas booleanas en formato texto
-        "missing_values": "impute",//imputar o eliminar
+        "missing_values": "impute",//impute o drop (eliminar)
         "impute_strategy": "mean", //mean, median, mode
         "scaling": "max-min",      //max, max-min, z-score
         "text_process": "tf-idf",  //tf-idf,one-hot,bow
-        "sampling": "undersampling"//undersampling, oversampling
+        "sampling": "undersampling"//undersampling, oversampling, none
     }
 }
