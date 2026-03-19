@@ -1,0 +1,101 @@
+id,producto,precio,edad,metodo_pago,descuento,opinion_cliente,compro
+1,Laptop,1200,25,tarjeta,si,"Excelente calidad y muy rapido",si
+2,Smartphone,800,34,paypal,no,"Un poco caro pero funcional",si
+3,Tablet,400,22,tarjeta,si,"Pantalla increible para estudiar",si
+4,Cascos,150,19,efectivo,no,"Se rompieron a la semana",no
+5,Monitor,300,45,tarjeta,no,"Colores muy vivos y nitidos",si
+6,Laptop,1300,50,paypal,si,"Ideal para mi trabajo diario",si
+7,Smartphone,750,28,tarjeta,no,"La bateria dura muy poco",no
+8,Tablet,450,31,paypal,si,"Ligera y potente me encanta",si
+9,Cascos,120,24,efectivo,no,"Sonido decente por el precio",si
+10,Monitor,350,38,tarjeta,si,"Gran tamaño para teletrabajar",si
+11,Laptop,2500,29,tarjeta,no,"Demasiado pesado para viajar",no
+12,Smartphone,900,42,paypal,si,"Camara espectacular en noche",si
+13,Tablet,380,21,tarjeta,no,"Se calienta mucho al jugar",no
+14,Cascos,200,26,efectivo,si,"Cancelacion de ruido magica",si
+15,Monitor,280,33,tarjeta,no,"Base algo inestable pero ok",si
+16,Laptop,1100,27,paypal,si,"Teclado muy comodo y suave",si
+17,Smartphone,150,65,efectivo,no,"Muy basico pero me sirve",si
+18,Tablet,500,35,tarjeta,si,"El lapiz tactil es preciso",si
+19,Cascos,80,20,paypal,no,"Plastico de mala calidad",no
+20,Monitor,420,40,tarjeta,si,"Resolucion 4k impresionante",si
+21,Laptop,1250,23,tarjeta,no,"Diseño elegante y fino",si
+22,Smartphone,850,36,paypal,si,"Interfaz muy intuitiva",si
+23,Tablet,420,25,tarjeta,no,"Poca memoria de base",no
+24,Cascos,180,30,efectivo,si,"Bajos potentes y claros",si
+25,Monitor,310,48,tarjeta,no,"Mucho reflejo en la pantalla",no
+26,Laptop,1350,52,paypal,si,"Rapidez asombrosa al encender",si
+27,Smartphone,700,32,tarjeta,no,"Fotos de dia muy buenas",si
+28,Tablet,460,29,paypal,si,"Carga muy rapido el sistema",si
+29,Cascos,140,22,efectivo,no,"Almohadillas incomodas",no
+30,Monitor,360,41,tarjeta,si,"Perfecto para diseño grafico",si
+31,Laptop,1200,,tarjeta,si,"Llego golpeado el paquete",no
+32,Smartphone,820,33,paypal,no,"El brillo es excelente",si
+33,Tablet,,24,tarjeta,si,"No enciende despues de un dia",no
+34,Cascos,160,28,efectivo,no,"Cable muy corto y fragil",no
+35,Monitor,320,46,tarjeta,si,"Menu de ajustes dificil",no
+36,Laptop,1400,55,paypal,no,"Software preinstalado molesto",no
+37,Smartphone,780,30,tarjeta,si,"Resistente a salpicaduras",si
+38,Tablet,430,34,paypal,no,"Altavoces suenan a lata",no
+39,Cascos,110,21,efectivo,si,"Buen diseño y colores",si
+40,Monitor,340,39,tarjeta,no,"Muchos cables por detras",no
+41,Laptop,1280,26,tarjeta,si,"La mejor compra del año",si
+42,Smartphone,880,37,paypal,no,"Huella dactilar falla mucho",no
+43,Tablet,410,23,tarjeta,si,"Ideal para ver peliculas",si
+44,Cascos,190,31,efectivo,no,"Demasiado grandes para mi",no
+45,Monitor,290,47,tarjeta,si,"Bajo consumo de energia",si
+46,Laptop,1450,53,paypal,si,"Pantalla oled maravillosa",si
+47,Smartphone,720,29,tarjeta,no,"Se bloquea con frecuencia",no
+48,Tablet,480,32,paypal,si,"Muy fluido para navegar",si
+49,Cascos,130,23,efectivo,no,"No incluye funda de viaje",no
+50,Monitor,380,42,tarjeta,si,"Mejor que mi antiguo tv",si
+51,Laptop,1500,28,tarjeta,no,"Muy ruidoso el ventilador",no
+52,Smartphone,950,35,paypal,si,"Actualizaciones constantes",si
+53,Tablet,350,20,tarjeta,no,"Carcasa de plastico barata",no
+54,Cascos,220,27,efectivo,si,"Inalambricos con gran rango",si
+55,Monitor,270,44,tarjeta,no,"Pocos puertos hdmi",no
+56,Laptop,1150,26,paypal,si,"Relacion calidad precio top",si
+57,Smartphone,120,68,efectivo,no,"Letra pequeña no veo bien",no
+58,Tablet,520,36,tarjeta,si,"Va como un tiro el procesador",si
+59,Cascos,70,18,paypal,no,"Se escucha solo un lado",no
+60,Monitor,450,43,tarjeta,si,"Soporte de pared incluido",si
+61,Laptop,1300,24,tarjeta,no,"Me encanta el color gris",si
+62,Smartphone,860,37,paypal,si,"El reconocimiento facial va ok",si
+63,Tablet,400,25,tarjeta,no,"Sin ranura para tarjeta sd",no
+64,Cascos,170,29,efectivo,si,"Microfono muy nitido",si
+65,Monitor,330,49,tarjeta,no,"Demasiado marco lateral",no
+66,Laptop,1400,54,paypal,si,"Gran capacidad de disco duro",si
+67,Smartphone,710,31,tarjeta,no,"Se raya la pantalla facil",no
+68,Tablet,470,28,paypal,si,"Muy buen contraste",si
+69,Cascos,150,21,efectivo,no,"Incomodos con gafas",no
+70,Monitor,370,40,tarjeta,si,"Perfecto para consola",si
+71,Laptop,150,25,tarjeta,no,"Estafa no es lo que pedi",no
+72,Smartphone,840,34,paypal,si,"Muy delgado y ligero",si
+73,Tablet,390,22,tarjeta,no,"Bateria dura 2 horas",no
+74,Cascos,210,32,efectivo,si,"Plegables y resistentes",si
+75,Monitor,300,47,tarjeta,no,"Color negro poco profundo",no
+76,Laptop,1320,56,paypal,si,"Muy buena ventilacion",si
+77,Smartphone,790,29,tarjeta,no,"Muchas apps basura",no
+78,Tablet,440,33,paypal,si,"El altavoz es potente",si
+79,Cascos,100,22,efectivo,si,"Sencillos pero cumplen",si
+80,Monitor,350,41,tarjeta,no,"Sin altavoces integrados",no
+81,Laptop,1300,27,tarjeta,si,"Lo recomiendo a todos",si
+82,Smartphone,870,38,paypal,no,"Calidad de materiales pobre",no
+83,Tablet,420,24,tarjeta,si,"Carga por usb-c muy bien",si
+84,Cascos,195,33,efectivo,no,"Me aprietan las orejas",no
+85,Monitor,310,46,tarjeta,si,"No cansa la vista",si
+86,Laptop,1480,51,paypal,si,"Potencia de sobra para todo",si
+87,Smartphone,730,28,tarjeta,no,"Falla la conexion wifi",no
+88,Tablet,490,30,paypal,si,"Estructura de metal premium",si
+89,Cascos,125,24,efectivo,no,"Cable se enreda mucho",no
+90,Monitor,390,43,tarjeta,si,"Curvatura ideal",si
+91,Laptop,3000,30,tarjeta,no,"Extremadamente caro",no
+92,Smartphone,920,36,paypal,si,"Sensor de proximidad falla",no
+93,Tablet,360,19,tarjeta,no,"Android desactualizado",no
+94,Cascos,230,29,efectivo,si,"Los mejores que he tenido",si
+95,Monitor,260,45,tarjeta,no,"Muy poca luz",no
+96,Laptop,1180,25,paypal,si,"Silencioso y potente",si
+97,Smartphone,110,70,efectivo,no,"Dificil de configurar",no
+98,Tablet,550,38,tarjeta,si,"Graficos impresionantes",si
+99,Cascos,65,19,paypal,no,"Parece un juguete",no
+100,Monitor,480,44,tarjeta,si,"Increible para gaming",si
