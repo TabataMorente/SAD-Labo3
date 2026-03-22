@@ -1,6 +1,6 @@
 {
-    "target": "Especie",
-    "method": "knn",
+    "target": "compro",
+    "method": "bayes",
     "task": "classification",
     "hyperparameters_knn":{
         "n_neighbors": [1, 3, 5],
@@ -12,16 +12,16 @@
         "criterio": ["gini", "entropy"]
     },
     "hyperparameters_bayes": {
-        "var_smoothing": [1e-9]
+        "var_smoothing": [1e-9, 1e-8, 1e-7, 1e-5]
     },
     "preprocessing":{
-        "categorical_features":[],
-        "text_features": [],
-        "boolean_features": [],
+        "categorical_features":["producto","metodo_pago"],
+        "text_features": ["opinion_cliente"],
+        "boolean_features": ["descuento"],
         "missing_values": "impute",
         "impute_strategy": "mean",
-        "scaling": "max-min",
-        "text_process": "one-hot",
-        "sampling": "none"
+        "scaling": "z-score",
+        "text_process": "tf-idf",
+        "sampling": "oversampling"
     }
 }

@@ -1,0 +1,21 @@
+id,producto,precio,edad,metodo_pago,descuento,opinion_cliente,compro
+101,Laptop,1150,24,tarjeta,no,"Muy buen rendimiento",si
+102,Smartphone,850,31,paypal,si,"La pantalla es genial",si
+103,Tablet,420,22,tarjeta,no,"Lenta para juegos",no
+104,Cascos,160,25,efectivo,si,"Sonido envolvente",si
+105,Monitor,330,42,tarjeta,no,"Demasiado brillo",no
+106,Laptop,1250,29,paypal,si,"Elegante y potente",si
+107,Smartphone,130,72,efectivo,no,"No entiendo el menu",no
+108,Tablet,460,35,tarjeta,si,"Perfecta para trabajar",si
+109,Cascos,90,20,paypal,no,"Se rompio el cable",no
+110,Monitor,390,48,tarjeta,si,"Colores increibles",si
+111,Laptop,1100,,tarjeta,si,"Me gusta pero llego tarde",si
+112,Smartphone,890,34,paypal,no,"Bateria mediocre",no
+113,Tablet,,26,tarjeta,no,"No funciona el tactil",no
+114,Cascos,210,33,efectivo,si,"Calidad premium",si
+115,Monitor,280,45,tarjeta,no,"Relacion calidad precio bien",si
+116,Laptop,2800,30,tarjeta,no,"Precio absurdo",no
+117,Smartphone,750,27,paypal,si,"Muy rapido",si
+118,Tablet,400,23,tarjeta,no,"Memoria insuficiente",no
+119,Cascos,120,21,efectivo,si,"Comodos y bonitos",si
+120,Monitor,410,41,tarjeta,si,"Gran compra",si
