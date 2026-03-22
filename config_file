@@ -3,7 +3,7 @@
     "method": "knn",                //knn,tree,bayes
     "task": "classification",       //clasificación o regresión
     "hyperparameters_knn":{         //hiperparametros de knn: k = {1,2,3,4,5,...}, p = 0/1, w = 0/1
-        "n_neighbors": [1, 3, 5],
+        "n_neighbors": [1, 3, 5],   // IMPORTANTE: Aquí se pone un limite maximo y minimo
         "p": [1, 2],
         "weights": ["uniform", "distance"]
     },

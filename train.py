@@ -227,7 +227,7 @@ def train():
 
     # --- CASO NAIVE BAYES ---
     if method == 'bayes':
-        params_cfg = config.get('hyperparameters_bayes', {"var_smoothing": [1e-9]})
+        params_cfg = config.get('hyperparameters_bayes', {})
 
         # Naive Bayes suele probarse con diferentes suavizados (smoothing)
         for sm in params_cfg.get('var_smoothing', [1e-9]):
@@ -236,7 +236,6 @@ def train():
 
             # Evaluación en Dev (para elegir) y en Test (para saber la verdad)
             score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
-            score_test = f1_score(y_test_final, model.predict(X_test_p), average='macro')
 
             # GUARDAMOS TODOS LOS MODELOS GENERADOS
             folder_path = os.path.join("modelos", csv_id, method)
@@ -247,16 +246,20 @@ def train():
             full_save_path = os.path.join(folder_path, model_name)
 
             joblib.dump(model, full_save_path)
-            print(f"✅ Guardado: {full_save_path} | F1-Dev: {score_dev:.4f} | F1-Test: {score_test:.4f}")
+            print(f"✅ Guardado: {full_save_path} | F1-Dev: {score_dev:.4f}")
 
     elif method == 'knn':
         # Sacamos las listas del JSON. Si no existen, ponemos unas por defecto []
         params_cfg = config.get('hyperparameters_knn', {})
 
         # .get(clave, valor_por_defecto)
-        lista_k = params_cfg.get('n_neighbors', [1, 3, 5])
+        k_min, k_max = params_cfg.get('k_range', [1, 5])
         lista_p = params_cfg.get('p', [1, 2])
         lista_w = params_cfg.get('weights', ['uniform', 'distance'])
+
+        # GENERAMOS LA LISTA DINÁMICA
+        # range(inicio, fin + 1, paso) -> El paso 2 hace que sean impares: 1, 3, 5, 7, 9
+        lista_k = list(range(k_min, k_max + 1, 2))
 
         # BARRIDO DE HIPERPARÁMETROS: Probamos combinaciones de k, p y pesos
         for k in lista_k: # k: número de vecinos a consultar
@@ -268,13 +271,11 @@ def train():
                         model = KNeighborsRegressor(n_neighbors=k, p=p, weights=w)
                         model.fit(X_train_p, y_train)
                         score_dev = r2_score(y_dev, model.predict(X_dev_p))
-                        score_test = r2_score(y_test_final, model.predict(X_test_p))
                         metric = "R2"
                     else:
                         model = KNeighborsClassifier(n_neighbors=k, p=p, weights=w)
                         model.fit(X_train_p, y_train)
                         score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
-                        score_test = f1_score(y_test_final, model.predict(X_test_p), average='macro')
                         metric = "F1"
 
                     # GUARDAMOS TODOS LOS MODELOS GENERADOS
@@ -285,8 +286,10 @@ def train():
                     model_name = f"{csv_id}_{task}_knn_{params_str}.sav"
                     full_save_path = os.path.join(folder_path, model_name)
 
+                    # Guardamos el objeto del modelo
                     joblib.dump(model, full_save_path)
-                    print(f"✅ Guardado: {full_save_path} | F1-Dev: {score_dev:.4f} | F1-Test: {score_test:.4f}")
+                    # Reporte rápido en consola
+                    print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
 
 if __name__ == "__main__":
     train()
