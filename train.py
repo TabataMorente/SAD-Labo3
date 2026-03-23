@@ -16,6 +16,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.naive_bayes import GaussianNB  # --- Algoritmo Naive Bayes ---
 from sklearn.metrics import f1_score
 from sklearn.metrics import r2_score
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor # --- Algoritmo Decision Trees ---
 
 # Librerías para el balanceo
 from imblearn.under_sampling import RandomUnderSampler
@@ -290,6 +291,45 @@ def train():
                     joblib.dump(model, full_save_path)
                     # Reporte rápido en consola
                     print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
+
+    elif method == 'tree':
+        # 1. Extraemos los hiperparámetros del JSON
+        params_cfg = config.get('hyperparameters_tree', {})
+        lista_depth = params_cfg.get('max_depth', [None, 5, 10])
+        lista_crit = params_cfg.get('criterio', ['gini', 'entropy'])
+
+        print(f"🌳 Iniciando entrenamiento de Árboles de Decisión...")
+
+        # 2. Barrido de hiperparámetros
+        for depth in lista_depth:
+            for crit in lista_crit:
+
+                # 3. Ajuste según la tarea (Clasificación o Regresión)
+                if task == 'regression':
+                    # En regresión, el criterio suele ser 'squared_error' o 'absolute_error'
+                    # Adaptamos 'gini'/'entropy' a algo válido para regresión si el usuario se equivoca
+                    c_reg = 'squared_error' if crit == 'gini' else 'absolute_error'
+                    model = DecisionTreeRegressor(max_depth=depth, criterion=c_reg, random_state=42)
+                    model.fit(X_train_p, y_train)
+                    score_dev = r2_score(y_dev, model.predict(X_dev_p))
+                    metric = "R2"
+                else:
+                    model = DecisionTreeClassifier(max_depth=depth, criterion=crit, random_state=42)
+                    model.fit(X_train_p, y_train)
+                    score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                    metric = "F1"
+
+                # 4. Guardado del modelo
+                folder_path = os.path.join("modelos", csv_id, method)
+                os.makedirs(folder_path, exist_ok=True)
+
+                # Nombre descriptivo como pide tu práctica
+                params_str = f"depth={depth}_crit={crit}"
+                model_name = f"{csv_id}_{task}_tree_{params_str}.sav"
+                full_save_path = os.path.join(folder_path, model_name)
+
+                joblib.dump(model, full_save_path)
+                print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
 
 if __name__ == "__main__":
     train()

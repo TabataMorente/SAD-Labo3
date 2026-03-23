@@ -4,31 +4,21 @@ import subprocess
 
 
 def main():
-    if len(sys.argv) < 3:
-        print("Uso: python main.py <datos.csv> <config_file.json>")
+    if len(sys.argv) < 4:
+        print("Uso: python main.py <train.csv> <test.csv> <config_file.json>")
         sys.exit(1)
 
-    csv_file = sys.argv[1]
-    json_file = sys.argv[2]
+    csv_train = sys.argv[1]
+    csv_test = sys.argv[2]
+    json_file = sys.argv[3]
 
-    # Leemos el JSON para saber qué metodo usar
-    with open(json_file, 'r') as f:
-        config = json.load(f)
+    ## FASE DE ENTRENAMIENTO
+    # Llamamos a train.py con sus 3 argumentos correspondientes
+    subprocess.run(["python", "train.py", csv_train, csv_test, json_file])
 
-    metodo = config.get("method", "knn")  # Por defecto knn
-
-    if metodo == "knn":
-        print("🚀 Lanzando experimento kNN...")
-        # Llamamos al script de knn pasando los archivos
-        subprocess.run(["python", "KNN.py", csv_file, json_file])
-
-    elif metodo == "arbol":
-        print("🌳 Lanzando experimento Árbol de Decisión...")
-        subprocess.run(["python", "arbol.py", csv_file, json_file])
-
-    else:
-        print(f"❌ Método {metodo} no reconocido.")
-
+    ## FASE DE EVALUACION
+    # Llamamos a evaluar.py
+    subprocess.run(["python", "evaluar.py"])
 
 if __name__ == "__main__":
     main()

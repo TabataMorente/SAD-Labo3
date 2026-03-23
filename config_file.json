@@ -1,6 +1,6 @@
 {
     "target": "compro",
-    "method": "knn",
+    "method": "tree",
     "task": "classification",
     "hyperparameters_knn":{
         "k_range": [1, 9],

@@ -19,7 +19,7 @@ def evaluar_y_elegir_mejor():
 
     # 2. El programa extrae los datos automáticamente
     config = load_config(config_path)
-    method = config.get('method', 'knn') # Lee si es "knn" o "bayes" o el metodo que sea
+    method = config.get('method', 'tree') # Lee si es "knn" o "bayes" o "tree" o el metodo que sea
     # Extrae "ventas_train" del nombre del archivo
     csv_id = os.path.basename(train_path).split('.')[0]
     target = config['target']
