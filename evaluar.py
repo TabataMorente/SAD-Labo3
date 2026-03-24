@@ -12,26 +12,22 @@ from train import load_data, load_config, apply_preprocessing
 
 def evaluar_y_elegir_mejor():
     # Rutas por defecto (para que le des al botón y listo)
-    # 1. Estas son las únicas 3 cosas que "tocas"
-    train_path = "ventas_train.csv"
-    test_path = "ventas_test.csv"
-    config_path = "config_file.json"
+    if len(sys.argv) < 4:
+        train_path = "ventas_train.csv"
+        test_path = "ventas_test.csv"
+        config_path = "config_file.json"
+    else:
+        train_path = sys.argv[1]
+        test_path = sys.argv[2]
+        config_path = sys.argv[3]
 
     # 2. El programa extrae los datos automáticamente
     config = load_config(config_path)
     method = config.get('method', 'tree') # Lee si es "knn" o "bayes" o "tree" o el metodo que sea
+
     # Extrae "ventas_train" del nombre del archivo
     csv_id = os.path.basename(train_path).split('.')[0]
     target = config['target']
-
-    # 3. Construye la ruta igual que el train.py
-    # Resultado: "modelos/ventas_train/knn" o "modelos/ventas_train/bayes"
-    # Carpeta donde están los modelos que acabamos de entrenar
-    folder_path = os.path.join("modelos", csv_id, method)
-
-    if not os.path.exists(folder_path):
-        print(f"❌ No encuentro la carpeta de modelos: {folder_path}")
-        return
 
     # 1. Cargar datos originales
     df_full_train = load_data(train_path, config)  # Las 100 filas originales
@@ -54,15 +50,26 @@ def evaluar_y_elegir_mejor():
     y_test_final = df_test_final[target]
 
     # 5. Codificación del target
-    if config.get('task') == 'classification' and y_train_final.dtype == 'object':
-        from sklearn.preprocessing import LabelEncoder
-        le = LabelEncoder()
-        le.fit(y_train_final)
-        y_test_final = pd.Series(le.transform(y_test_final))
+    mapeo_aux = {'no': 0, 'si': 1, '0': 0, '1': 1}
+
+    if config.get('task') == 'classification':
+        # Convertimos la realidad a números
+        if y_test_final.dtype == 'object':
+            y_test_final = y_test_final.str.lower().map(mapeo_aux)
+        else:
+            y_test_final = y_test_final.astype(int)
 
     # 6. PASO MAESTRO: Preprocesamos usando las 80 filas para el "fit"
     # Esto garantiza que salgan las 215 columnas que espera Bayes
     _, _, X_test_p = apply_preprocessing(X_train_final, X_train_final, X_test_final, config)
+
+    # Construye la ruta igual que el train.py
+    # Carpeta donde están los modelos que acabamos de entrenar
+    folder_path = os.path.join("modelos", csv_id, method)
+
+    if not os.path.exists(folder_path):
+        print(f"❌ No encuentro la carpeta de modelos: {folder_path}")
+        return
 
     # 2. BUCLE PARA PROBAR TODOS LOS MODELOS
     best_score = -1
@@ -82,8 +89,16 @@ def evaluar_y_elegir_mejor():
             # Predicción con los datos de test preprocesados (las 215 columnas)
             y_pred = modelo.predict(X_test_p)
 
+            # --- PARCHE DE SEGURIDAD PARA TIPOS ---
+            # Forzamos a que sea string primero y luego mapeamos a número
+            mapeo_aux = {'no': 0, 'si': 1, '0': 0, '1': 1}
+
+            # Convertimos realidad y predicción a Series de Pandas para usar .map()
+            y_test_num = pd.Series(y_test_final).astype(str).str.lower().map(mapeo_aux).values
+            y_pred_num = pd.Series(y_pred).astype(str).str.lower().map(mapeo_aux).values
+
             # Calculamos la métrica
-            score = f1_score(y_test_final, y_pred, average='macro')
+            score = f1_score(y_test_num, y_pred_num, average='macro')
 
             # Imprimimos el resultado de este modelo concreto
             print(f" Probando: {file:50} | F1-Score: {score:.4f}")

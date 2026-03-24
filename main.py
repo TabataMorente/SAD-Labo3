@@ -18,7 +18,7 @@ def main():
 
     ## FASE DE EVALUACION
     # Llamamos a evaluar.py
-    subprocess.run(["python", "evaluar.py"])
+    subprocess.run(["python", "evaluar.py", csv_train, csv_test, json_file])
 
 if __name__ == "__main__":
     main()

@@ -13,7 +13,8 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder, R
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.naive_bayes import GaussianNB  # --- Algoritmo Naive Bayes ---
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB # --- Algoritmo Naive Bayes ---
+from sklearn.preprocessing import KBinsDiscretizer # Para discretizar
 from sklearn.metrics import f1_score
 from sklearn.metrics import r2_score
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor # --- Algoritmo Decision Trees ---
@@ -148,6 +149,25 @@ def apply_preprocessing(X_train, X_dev, X_test, config):
         dev_df[col] = np.clip(dev_df[col], lower_limit, upper_limit)
         test_df[col] = np.clip(test_df[col], lower_limit, upper_limit)
 
+    # --- 5.5 DISCRETIZACIÓN (Opcional) ---
+    # Convertimos números continuos en "cajones" o categorías (bins)
+
+    disc_cols = prep_cfg.get('discretize_features', [])
+    if disc_cols:
+        n_bins = prep_cfg.get('discretize_bins', 3)
+        # encode='ordinal' para que devuelva 0, 1, 2...
+        # strategy='uniform' para que los rangos tengan el mismo ancho
+        discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='uniform', subsample=None)
+
+        for col in disc_cols:
+            if col in train_df.columns:
+                # 1. Ajustamos con los datos de TRAIN
+                train_df[col] = discretizer.fit_transform(train_df[[col]])
+                # 2. Aplicamos la misma frontera a DEV y TEST
+                dev_df[col] = discretizer.transform(dev_df[[col]])
+                test_df[col] = discretizer.transform(test_df[[col]])
+                print(f"INFO: Columna '{col}' discretizada en {n_bins} intervalos.")
+
     # --- 6. ESCALADO FINAL  ---
     # Normalizamos los rangos de los números para que el KNN funcione bien
     if prep_cfg.get('scaling') == 'max-min':
@@ -226,29 +246,47 @@ def train():
 
     print(f"🚀 Iniciando entrenamiento con método: {method}...")
 
-    # --- CASO NAIVE BAYES ---
+    # --- CASO NAIVE BAYES (MULTIMODELO) ---
     if method == 'bayes':
         params_cfg = config.get('hyperparameters_bayes', {})
+        b_type = params_cfg.get('bayes_type', 'gaussian')
 
-        # Naive Bayes suele probarse con diferentes suavizados (smoothing)
-        for sm in params_cfg.get('var_smoothing', [1e-9]):
-            model = GaussianNB(var_smoothing=sm)
-            model.fit(X_train_p, y_train)
+        # Carpeta común para todos los Bayes
+        folder_path = os.path.join("modelos", csv_id, method)
+        os.makedirs(folder_path, exist_ok=True)
 
-            # Evaluación en Dev (para elegir) y en Test (para saber la verdad)
-            score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+        # 1. Elegimos el "sabor" de Bayes
+        if b_type == 'multinomial':
+            for a in params_cfg.get('alpha', [1.0]):
+                model = MultinomialNB(alpha=a)
+                model.fit(X_train_p, y_train)
+                score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
 
-            # GUARDAMOS TODOS LOS MODELOS GENERADOS
-            folder_path = os.path.join("modelos", csv_id, method)
-            os.makedirs(folder_path, exist_ok=True)
+                model_name = f"{csv_id}_bayes_multi_alpha={a}.sav"
+                joblib.dump(model, os.path.join(folder_path, model_name))
+                print(f"✅ Guardado: {model_name} | F1-Dev: {score_dev:.4f}")
 
-            params_str = f"sm={sm}"
-            model_name = f"{csv_id}_bayes_{params_str}.sav"
-            full_save_path = os.path.join(folder_path, model_name)
+        elif b_type == 'bernoulli':
+            for a in params_cfg.get('alpha', [1.0]):
+                model = BernoulliNB(alpha=a)
+                model.fit(X_train_p, y_train)
+                score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
 
-            joblib.dump(model, full_save_path)
-            print(f"✅ Guardado: {full_save_path} | F1-Dev: {score_dev:.4f}")
+                model_name = f"{csv_id}_bayes_bern_alpha={a}.sav"
+                joblib.dump(model, os.path.join(folder_path, model_name))
+                print(f"✅ Guardado: {model_name} | F1-Dev: {score_dev:.4f}")
 
+        else:  # GAUSSIAN
+            for sm in params_cfg.get('var_smoothing', [1e-9]):
+                model = GaussianNB(var_smoothing=sm)
+                model.fit(X_train_p, y_train)
+                score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+
+                model_name = f"{csv_id}_bayes_gauss_sm={sm}.sav"
+                joblib.dump(model, os.path.join(folder_path, model_name))
+                print(f"✅ Guardado: {model_name} | F1-Dev: {score_dev:.4f}")
+
+    # --- CASO KNN ---
     elif method == 'knn':
         # Sacamos las listas del JSON. Si no existen, ponemos unas por defecto []
         params_cfg = config.get('hyperparameters_knn', {})
@@ -292,6 +330,7 @@ def train():
                     # Reporte rápido en consola
                     print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
 
+    # --- CASO ARBOLES DE DECISION ---
     elif method == 'tree':
         # 1. Extraemos los hiperparámetros del JSON
         params_cfg = config.get('hyperparameters_tree', {})

@@ -1,6 +1,6 @@
 {
     "target": "compro",
-    "method": "tree",
+    "method": "bayes",
     "task": "classification",
     "hyperparameters_knn":{
         "k_range": [1, 9],
@@ -12,7 +12,9 @@
         "criterio": ["gini", "entropy"]
     },
     "hyperparameters_bayes": {
-        "var_smoothing": [1e-9, 1e-7, 1e-5]
+        "var_smoothing": [1e-9, 1e-7, 1e-5],
+        "bayes_type": "multinomial",
+        "alpha": [0.1, 0.5, 1.0, 2.0]
     },
     "preprocessing":{
         "categorical_features":["producto","metodo_pago"],
@@ -20,7 +22,9 @@
         "boolean_features": ["descuento"],
         "missing_values": "impute",
         "impute_strategy": "mean",
-        "scaling": "z-score",
+        "discretize_features": ["edad"],
+        "discretize_bins": 3,
+        "scaling": "max-min",
         "text_process": "tf-idf",
         "sampling": "oversampling"
     }
