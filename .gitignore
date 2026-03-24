@@ -1,0 +1,23 @@
+# --- Entornos virtuales (No subir la carpeta .venv) ---
+.venv/
+venv/
+ENV/
+
+# --- Configuración de PyCharm (Para que no se te vaya el intérprete) ---
+.idea/
+*.iml
+
+# --- Archivos de Python (Basura temporal) ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Datos y Modelos (Opcional, decide si quieres compartirlos) ---
+# Si quieres que tu compi vea tus modelos, borra las líneas de abajo.
+# Si prefieres que cada uno entrene los suyos, déjalas:
+# modelos/
+# modelos_finales/
+
+# --- Archivos del sistema ---
+.DS_Store
+Thumbs.db
