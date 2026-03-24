@@ -18,6 +18,7 @@ from sklearn.preprocessing import KBinsDiscretizer # Para discretizar
 from sklearn.metrics import f1_score
 from sklearn.metrics import r2_score
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor # --- Algoritmo Decision Trees ---
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor # --- Algoritmo Random Forest ---
 
 # Librerías para el balanceo
 from imblearn.under_sampling import RandomUnderSampler
@@ -334,7 +335,7 @@ def train():
     elif method == 'tree':
         # 1. Extraemos los hiperparámetros del JSON
         params_cfg = config.get('hyperparameters_tree', {})
-        lista_depth = params_cfg.get('max_depth', [None, 5, 10])
+        lista_depth = params_cfg.get('max_depth', [None, 5, 10]) ## valores de profundidad por defecto
         lista_crit = params_cfg.get('criterio', ['gini', 'entropy'])
 
         print(f"🌳 Iniciando entrenamiento de Árboles de Decisión...")
@@ -348,9 +349,9 @@ def train():
                     # En regresión, el criterio suele ser 'squared_error' o 'absolute_error'
                     # Adaptamos 'gini'/'entropy' a algo válido para regresión si el usuario se equivoca
                     c_reg = 'squared_error' if crit == 'gini' else 'absolute_error'
-                    model = DecisionTreeRegressor(max_depth=depth, criterion=c_reg, random_state=42)
-                    model.fit(X_train_p, y_train)
-                    score_dev = r2_score(y_dev, model.predict(X_dev_p))
+                    model = DecisionTreeRegressor(max_depth=depth, criterion=c_reg, random_state=42) #crea el modelo
+                    model.fit(X_train_p, y_train) #estudia los datos X y aprende a llegar al target Y
+                    score_dev = r2_score(y_dev, model.predict(X_dev_p)) #calcula R2 score
                     metric = "R2"
                 else:
                     model = DecisionTreeClassifier(max_depth=depth, criterion=crit, random_state=42)
@@ -369,6 +370,46 @@ def train():
 
                 joblib.dump(model, full_save_path)
                 print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
+
+    # --- CASO RANDOM FOREST ---
+    elif method == 'forest':
+        # 1. Extraemos los hiperparámetros del JSON
+        params_cfg = config.get('hyperparameters_rf', {})
+        lista_n_estimators = params_cfg.get('n_estimators', [50, 100])  # Número de árboles
+        lista_depth = params_cfg.get('max_depth', [None, 5, 10])
+        lista_features = params_cfg.get('max_features', ['sqrt', 'log2'])  # Cuántas variables ve cada árbol, para que los arboles sean diferentes entre si
+
+        print(f"🌲🌲 Iniciando entrenamiento de Random Forest...")
+
+        # 2. Triple barrido de hiperparámetros
+        for n_est in lista_n_estimators:
+            for depth in lista_depth:
+                for feat in lista_features:
+
+                    # 3. Ajuste según la tarea
+                    if task == 'regression':
+                        model = RandomForestRegressor(n_estimators=n_est, max_depth=depth,
+                                                      max_features=feat, random_state=42, n_jobs=-1)
+                        model.fit(X_train_p, y_train)
+                        score_dev = r2_score(y_dev, model.predict(X_dev_p))
+                        metric = "R2"
+                    else:
+                        model = RandomForestClassifier(n_estimators=n_est, max_depth=depth,
+                                                       max_features=feat, random_state=42, n_jobs=-1)
+                        model.fit(X_train_p, y_train)
+                        score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                        metric = "F1"
+
+                    # 4. Guardado
+                    folder_path = os.path.join("modelos", csv_id, method)
+                    os.makedirs(folder_path, exist_ok=True)
+
+                    params_str = f"n={n_est}_d={depth}_f={feat}"
+                    model_name = f"{csv_id}_{task}_rf_{params_str}.sav"
+                    full_save_path = os.path.join(folder_path, model_name)
+
+                    joblib.dump(model, full_save_path)
+                    print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
 
 if __name__ == "__main__":
     train()
