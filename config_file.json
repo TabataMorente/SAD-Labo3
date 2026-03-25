@@ -1,11 +1,13 @@
 {
     "target": "compro",
-    "method": "forest",
+    "method": "knn",
     "task": "classification",
+    "evaluation": "macro",
     "hyperparameters_knn":{
         "k_range": [1, 9],
         "p": [1, 2],
-        "weights": ["uniform", "distance"]
+        "weights": ["uniform", "distance"],
+        "step": 2
     },
     "hyperparameters_tree":{
         "max_depth": [3, 5, 10],
@@ -27,7 +29,7 @@
         "boolean_features": ["descuento"],
         "missing_values": "impute",
         "impute_strategy": "mean",
-        "discretize_features": ["edad"],
+        "discretize_features": [],
         "discretize_bins": 3,
         "scaling": "max-min",
         "text_process": "tf-idf",

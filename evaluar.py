@@ -1,131 +1,134 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-import joblib
+import joblib  # Librería para cargar los modelos guardados (.sav) de forma eficiente
 import pandas as pd
-import shutil  # Para copiar archivos
-from sklearn.metrics import f1_score
+# Importamos las métricas necesarias: F1 para clasificación, R2 para regresión y la Matriz de Confusión
+from sklearn.metrics import f1_score, r2_score, confusion_matrix
+from sklearn.model_selection import train_test_split
 
-# Importamos tus funciones
+# Importamos las funciones de utilidad desde tu script train.py
+# Esto asegura que la carga y el preprocesamiento sean idénticos en ambos procesos
 from train import load_data, load_config, apply_preprocessing
 
 
-def evaluar_y_elegir_mejor():
-    # Rutas por defecto (para que le des al botón y listo)
+def evaluar_mejor_modelo():
+    """
+    Función maestra para evaluar el rendimiento del mejor modelo obtenido
+    frente a un conjunto de datos de test (examen final).
+    """
+
+    # --- 1. CONFIGURACIÓN INICIAL Y CARGA DE RUTAS ---
+    # Comprobamos si el usuario ha pasado los 3 archivos por consola. Si no, usamos valores por defecto.
     if len(sys.argv) < 4:
-        train_path = "ventas_train.csv"
-        test_path = "ventas_test.csv"
-        config_path = "config_file.json"
+        train_path, test_path, config_path = "ventas_train.csv", "ventas_test.csv", "config_file.json"
+        print(f"⚠️ INFO: Usando rutas por defecto: {train_path}, {test_path}, {config_path}")
     else:
-        train_path = sys.argv[1]
-        test_path = sys.argv[2]
-        config_path = sys.argv[3]
+        train_path, test_path, config_path = sys.argv[1], sys.argv[2], sys.argv[3]
 
-    # 2. El programa extrae los datos automáticamente
+    # Leemos el archivo JSON para conocer la configuración del experimento
     config = load_config(config_path)
-    method = config.get('method', 'forest') # Lee si es "knn" o "bayes" o "tree" o el metodo que sea
+    method = config.get('method', 'knn')  # Metodo de ML (knn, bayes, tree, forest)
+    task = config.get('task', 'classification')  # Tipo de tarea (clasificación o regresión)
+    target = config['target']  # Nombre de la columna que queremos predecir
+    csv_id = os.path.basename(train_path).split('.')[0]  # Nombre del archivo sin extensión (ej: ventas_train)
 
-    # Extrae "ventas_train" del nombre del archivo
-    csv_id = os.path.basename(train_path).split('.')[0]
-    target = config['target']
+    # --- 2. RECONSTRUCCIÓN DEL ESTADO DE ENTRENAMIENTO ---
+    # Cargamos el dataset completo de entrenamiento y el de test
+    df_full_train = load_data(train_path, config)
+    df_test_final = load_data(test_path, config)
 
-    # 1. Cargar datos originales
-    df_full_train = load_data(train_path, config)  # Las 100 filas originales
-    df_test_final = load_data(test_path, config)  # Tu CSV de test externo (el examen)
+    # REPETIMOS EL SPLIT EXACTO: Es vital usar el mismo random_state y stratify que en train.py
+    # Necesitamos X_train_80 para que el preprocesado 'encaje' con lo que el modelo aprendió (las 215 columnas)
+    X_train_80, _, _, _ = train_test_split(
+        df_full_train.drop(columns=[target]),
+        df_full_train[target],
+        test_size=0.2,
+        random_state=42,
+        stratify=df_full_train[target] if task == 'classification' else None
+    )
 
-    # 2. REPETIMOS EL SPLIT (Asegúrate de que random_state sea el mismo que en train.py)
-    from sklearn.model_selection import train_test_split
-    df_train_80, _ = train_test_split(df_full_train, test_size=0.2, random_state=42)
-
-    # 3. Limpieza de nulos (si está en el JSON)
-    if config['preprocessing'].get('missing_values') == 'drop':
-        df_train_80 = df_train_80.dropna().reset_index(drop=True)
-        df_test_final = df_test_final.dropna().reset_index(drop=True)
-
-    # 4. Preparamos X e y finales
-    X_train_final = df_train_80.drop(columns=[target])
-    y_train_final = df_train_80[target]
-
+    # Separamos las características (X) y la realidad (y) del conjunto de Test externo
     X_test_final = df_test_final.drop(columns=[target])
     y_test_final = df_test_final[target]
 
-    # 5. Codificación del target
-    mapeo_aux = {'no': 0, 'si': 1, '0': 0, '1': 1}
+    # PASO CRÍTICO: Preprocesamos el test usando X_train_80 como base para el 'fit'
+    # Esto garantiza que si hubo TF-IDF o escalado, las dimensiones finales sean las correctas.
+    _, _, X_test_p = apply_preprocessing(X_train_80, X_train_80, X_test_final, config)
 
-    if config.get('task') == 'classification':
-        # Convertimos la realidad a números
-        if y_test_final.dtype == 'object':
-            y_test_final = y_test_final.str.lower().map(mapeo_aux)
-        else:
-            y_test_final = y_test_final.astype(int)
+    # --- 3. LOCALIZACIÓN Y CARGA DEL MODELO GANADOR ---
+    # Definimos la carpeta donde el train.py guardó al 'campeón'
+    final_folder = "modelos_finales"
+    model_name = f"MEJOR_{method}_{csv_id}.sav"
+    ruta_modelo = os.path.join(final_folder, model_name)
 
-    # 6. PASO MAESTRO: Preprocesamos usando las 80 filas para el "fit"
-    # Esto garantiza que salgan las 215 columnas que espera Bayes
-    _, _, X_test_p = apply_preprocessing(X_train_final, X_train_final, X_test_final, config)
-
-    # Construye la ruta igual que el train.py
-    # Carpeta donde están los modelos que acabamos de entrenar
-    folder_path = os.path.join("modelos", csv_id, method)
-
-    if not os.path.exists(folder_path):
-        print(f"❌ No encuentro la carpeta de modelos: {folder_path}")
+    # Verificamos que el archivo existe antes de intentar cargarlo
+    if not os.path.exists(ruta_modelo):
+        print(f"❌ ERROR: No se encuentra el archivo {ruta_modelo}. ¿Has ejecutado train.py primero?")
         return
 
-    # 2. BUCLE PARA PROBAR TODOS LOS MODELOS
-    best_score = -1
-    best_model_name = ""
-
     print("\n" + "=" * 60)
-    print(f" INICIANDO EVALUACIÓN DE MODELOS ({method.upper()})")
+    print(f" 🏆 EVALUANDO EL MEJOR MODELO: {model_name}")
     print("=" * 60)
-    print(f" Cargando modelos desde: {folder_path}\n")
 
-    # Listamos los archivos y los probamos uno a uno
-    for file in sorted(os.listdir(folder_path)):  # sorted para que salgan en orden
-        if file.endswith(".sav"):
-            ruta_completa = os.path.join(folder_path, file)
-            modelo = joblib.load(ruta_completa)
+    # Cargamos el modelo con joblib y realizamos las predicciones sobre el test preprocesado
+    modelo = joblib.load(ruta_modelo)
+    y_pred = modelo.predict(X_test_p)
 
-            # Predicción con los datos de test preprocesados (las 215 columnas)
-            y_pred = modelo.predict(X_test_p)
+    # --- 4. TRATAMIENTO DE ETIQUETAS Y MÉTRICAS ---
+    # Mapa para convertir etiquetas de texto ('si'/'no') a números (1/0) para cálculos matemáticos
+    mapeo = {'no': 0, 'si': 1, '0': 0, '1': 1}
 
-            # --- PARCHE DE SEGURIDAD PARA TIPOS ---
-            # Forzamos a que sea string primero y luego mapeamos a número
-            mapeo_aux = {'no': 0, 'si': 1, '0': 0, '1': 1}
+    # Aplicamos el mapeo de forma segura usando Series de Pandas
+    y_test_ser = pd.Series(y_test_final).astype(str).str.lower().map(mapeo)
+    y_pred_ser = pd.Series(y_pred).astype(str).str.lower().map(mapeo)
 
-            # Convertimos realidad y predicción a Series de Pandas para usar .map()
-            y_test_num = pd.Series(y_test_final).astype(str).str.lower().map(mapeo_aux).values
-            y_pred_num = pd.Series(y_pred).astype(str).str.lower().map(mapeo_aux).values
+    # Rellenamos nulos en caso de que los datos originales ya fueran numéricos
+    y_test_num = y_test_ser.fillna(pd.Series(y_test_final)).values
+    y_pred_num = y_pred_ser.fillna(pd.Series(y_pred)).values
 
-            # Calculamos la métrica
-            score = f1_score(y_test_num, y_pred_num, average='macro')
+    # Obtenemos la estrategia de evaluación (macro o micro) desde el archivo JSON
+    eval_strat = config.get('evaluation', 'macro')
 
-            # Imprimimos el resultado de este modelo concreto
-            print(f" Probando: {file:50} | F1-Score: {score:.4f}")
-
-            # Lógica para encontrar al máximo ganador
-            if score > best_score:
-                best_score = score
-                best_model_name = file
-
-    # 3. VEREDICTO FINAL Y GUARDADO
-    if best_model_name:
-        dest_folder = "modelos_finales"
-        os.makedirs(dest_folder, exist_ok=True)
-
-        origen = os.path.join(folder_path, best_model_name)
-        destino = os.path.join(dest_folder, f"MEJOR_{method}_{best_model_name}")
-
-        shutil.copy2(origen, destino)
-
-        print("\n" + "⭐ " * 20)
-        print(f" 🏆 EL GANADOR ES: {best_model_name}")
-        print(f" PUNTUACIÓN MÁXIMA EN TEST: {best_score:.4f}")
-        print(f" MODELO ASEGURADO EN: {destino}")
-        print("⭐ " * 20 + "\n")
+    # Evaluamos según si la tarea es Regresión (R2) o Clasificación (F1)
+    if task == 'regression':
+        score = r2_score(y_test_num, y_pred_num)
+        print(f" ✅ RESULTADO FINAL (R2-Score): {score:.4f}")
     else:
-        print("⚠️ No se encontraron modelos válidos para evaluar.")
+        score = f1_score(y_test_num, y_pred_num, average=eval_strat)
+        print(f" ✅ RESULTADO FINAL (F1-Score {eval_strat}): {score:.4f}")
+
+        # --- 🧩 CÁLCULO DE LA MATRIZ DE CONFUSIÓN ---
+        # Nos permite ver cuántos aciertos y fallos ha tenido el modelo por cada clase
+        print("\n 📊 MATRIZ DE CONFUSIÓN (Fila: Real | Columna: Predicho):")
+        matrix = confusion_matrix(y_test_num, y_pred_num)
+        print(matrix)
+        print(f"\n Desglose de resultados:")
+        print(f" - [0,0] Verdaderos Negativos (Dijo No y era No): {matrix[0][0]}")
+        print(f" - [0,1] Falsos Positivos (Dijo Si y era No): {matrix[0][1]}")
+        print(f" - [1,0] Falsos Negativos (Dijo No y era Si): {matrix[1][0]}")
+        print(f" - [1,1] Verdaderos Positivos (Dijo Si y era Si): {matrix[1][1]}")
+
+    # --- 5. EXPORTACIÓN DE RESULTADOS A CSV ---
+    # Creamos la carpeta de salida (ej: csv/ventas_train/) si no existe todavía
+    salida_dir = os.path.join("csv", csv_id)
+    os.makedirs(salida_dir, exist_ok=True)
+
+    # Creamos un DataFrame para comparar fila a fila la realidad vs la predicción
+    df_resultados = pd.DataFrame({
+        'Valor_Real': y_test_num,
+        'Prediccion_Campeon': y_pred_num
+    })
+
+    # Guardamos el archivo CSV final para análisis externo (ej: en Excel)
+    ruta_unificada = os.path.join(salida_dir, f"evaluacion_final_{method}.csv")
+    df_resultados.to_csv(ruta_unificada, index=False)
+
+    print("\n" + "📂 " * 10)
+    print(f"ARCHIVO DE RESULTADOS GENERADO EN: {ruta_unificada}")
+    print("📂 " * 10 + "\n")
 
 
 if __name__ == "__main__":
-    evaluar_y_elegir_mejor()
+    # Punto de entrada del script
+    evaluar_mejor_modelo()

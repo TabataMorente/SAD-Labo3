@@ -178,7 +178,7 @@ def apply_preprocessing(X_train, X_dev, X_test, config):
     elif prep_cfg.get('scaling') == 'max':
         scaler = StandardScaler() # Centra los datos (media 0, desviación 1)
     else:
-        scaler = RobustScaler()  # Escala robusta frente a outliers residuales
+        scaler = None
 
     # Ajustamos el escalador con TRAIN y transformamos los tres conjuntos
     X_train_final = scaler.fit_transform(train_df)
@@ -204,8 +204,6 @@ def train():
         df_train = df_train.dropna().reset_index(drop=True)
         df_test = df_test.dropna().reset_index(drop=True)
 
-    target = config['target']
-
     # Separamos características (X) de la etiqueta a predecir (y)
     # Como load_data garantizó que el target es la última columna:
     X_train_full = df_train.iloc[:, :-1]  # "Coge todas las columnas menos la última"
@@ -225,7 +223,7 @@ def train():
 
     # DIVISION PARA VALIDACIÓN (Dev):
     # Como ya tenemos el Test aparte, dividimos el Train para sacar un 20% para elegir parámetros (Dev)
-    X_train, X_dev, y_train, y_dev = train_test_split(X_train_full, y_train_full, test_size=0.20, random_state=42)
+    X_train, X_dev, y_train, y_dev = train_test_split(X_train_full, y_train_full, test_size=0.20, random_state=42,stratify=y_train_full)
 
     # Aplicamos preprocesado a los tres bloques
     X_train_p, X_dev_p, X_test_p = apply_preprocessing(X_train.copy(), X_dev.copy(), X_test_final.copy(), config)
@@ -239,11 +237,16 @@ def train():
         sampler = RandomOverSampler(random_state=42) # Inventa filas de la clase minoritaria
         X_train_p, y_train = sampler.fit_resample(X_train_p, y_train)
 
-
     # --- INICIO DEL ENTRENAMIENTO ---
     method = config.get('method', 'knn')
     task = config.get('task', 'classification')
     csv_id = os.path.basename(sys.argv[1]).split('.')[0]
+    eval_strat = config.get('evaluation', 'macro')  # Estrategia de evaluación (macro/micro) del JSON
+    #lista para guardar las predicciones de los modelos
+    dict_predicciones = {'Valor_Real': y_dev.values}
+    #carpeta para los csv
+    folder_path = os.path.join("csv", csv_id)
+    os.makedirs(folder_path, exist_ok=True)
 
     print(f"🚀 Iniciando entrenamiento con método: {method}...")
 
@@ -258,12 +261,17 @@ def train():
 
         # 1. Elegimos el "sabor" de Bayes
         if b_type == 'multinomial':
+            # Tipo de algoritmo: 'multinomial' es ideal cuando discretizamos o usamos frecuencias
             for a in params_cfg.get('alpha', [1.0]):
+                # Parámetro Alpha: Es el 'Suavizado de Laplace'. Suma un pequeño valor para que ninguna probabilidad sea 0%.
                 model = MultinomialNB(alpha=a)
                 model.fit(X_train_p, y_train)
-                score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                y_pred = model.predict(X_dev_p)  # Generamos predicción para comparar
+                score_dev = f1_score(y_dev, y_pred, average=eval_strat)
 
-                model_name = f"{csv_id}_bayes_multi_alpha={a}.sav"
+                model_name = f"bayes_multi_alpha={a}.sav"
+                dict_predicciones[model_name] = y_pred
+
                 joblib.dump(model, os.path.join(folder_path, model_name))
                 print(f"✅ Guardado: {model_name} | F1-Dev: {score_dev:.4f}")
 
@@ -271,19 +279,26 @@ def train():
             for a in params_cfg.get('alpha', [1.0]):
                 model = BernoulliNB(alpha=a)
                 model.fit(X_train_p, y_train)
-                score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                y_pred = model.predict(X_dev_p)
+                score_dev = f1_score(y_dev, y_pred, average=eval_strat)
 
-                model_name = f"{csv_id}_bayes_bern_alpha={a}.sav"
+                model_name = f"bayes_bern_alpha={a}.sav"
+                dict_predicciones[model_name] = y_pred
+
                 joblib.dump(model, os.path.join(folder_path, model_name))
                 print(f"✅ Guardado: {model_name} | F1-Dev: {score_dev:.4f}")
 
         else:  # GAUSSIAN
             for sm in params_cfg.get('var_smoothing', [1e-9]):
+                # Suavizado de varianza: Ayuda al modelo GaussianNB a no ser tan rígido (evita divisiones por cero)
                 model = GaussianNB(var_smoothing=sm)
                 model.fit(X_train_p, y_train)
-                score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                y_pred = model.predict(X_dev_p)
+                score_dev = f1_score(y_dev, y_pred, average=eval_strat)
 
-                model_name = f"{csv_id}_bayes_gauss_sm={sm}.sav"
+                model_name = f"bayes_gauss_sm={sm}.sav"
+                dict_predicciones[model_name] = y_pred
+
                 joblib.dump(model, os.path.join(folder_path, model_name))
                 print(f"✅ Guardado: {model_name} | F1-Dev: {score_dev:.4f}")
 
@@ -293,29 +308,31 @@ def train():
         params_cfg = config.get('hyperparameters_knn', {})
 
         # .get(clave, valor_por_defecto)
-        k_min, k_max = params_cfg.get('k_range', [1, 5])
+        k_min, k_max = params_cfg.get('n_neighbors', [1, 5])  # IMPORTANTE: Aquí se pone un limite maximo y minimo
         lista_p = params_cfg.get('p', [1, 2])
-        lista_w = params_cfg.get('weights', ['uniform', 'distance'])
+        lista_w = params_cfg.get('weights', ["uniform", "distance"])
+        step = params_cfg.get('step', 2)  # Va de 2 en 2, o el numero que sea
 
         # GENERAMOS LA LISTA DINÁMICA
-        # range(inicio, fin + 1, paso) -> El paso 2 hace que sean impares: 1, 3, 5, 7, 9
-        lista_k = list(range(k_min, k_max + 1, 2))
+        lista_k = list(range(k_min, k_max + 1, step))
 
         # BARRIDO DE HIPERPARÁMETROS: Probamos combinaciones de k, p y pesos
-        for k in lista_k: # k: número de vecinos a consultar
-            for p in lista_p: # p=1 es distancia Manhattan, p=2 es distancia Euclídea
-                for w in lista_w: # w: peso de la distancia (uniforme o ponderado)
+        for k in lista_k:  # k: número de vecinos a consultar
+            for p in lista_p:  # p=1 es distancia Manhattan, p=2 es distancia Euclídea
+                for w in lista_w:  # w: peso de la distancia (uniforme o ponderado)
 
                     # 1. ELEGIMOS EL ALGORITMO SEGÚN LA TAREA
                     if task == 'regression':
                         model = KNeighborsRegressor(n_neighbors=k, p=p, weights=w)
                         model.fit(X_train_p, y_train)
-                        score_dev = r2_score(y_dev, model.predict(X_dev_p))
+                        y_pred = model.predict(X_dev_p)
+                        score_dev = r2_score(y_dev, y_pred)
                         metric = "R2"
                     else:
                         model = KNeighborsClassifier(n_neighbors=k, p=p, weights=w)
                         model.fit(X_train_p, y_train)
-                        score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                        y_pred = model.predict(X_dev_p)
+                        score_dev = f1_score(y_dev, y_pred, average=eval_strat)
                         metric = "F1"
 
                     # GUARDAMOS TODOS LOS MODELOS GENERADOS
@@ -323,22 +340,20 @@ def train():
                     os.makedirs(folder_path, exist_ok=True)
 
                     params_str = f"k={k}_p={p}_w={w}"
-                    model_name = f"{csv_id}_{task}_knn_{params_str}.sav"
-                    full_save_path = os.path.join(folder_path, model_name)
+                    model_name = f"knn_{params_str}.sav"
 
-                    # Guardamos el objeto del modelo
-                    joblib.dump(model, full_save_path)
-                    # Reporte rápido en consola
+                    # --- GUARDADO DE RESULTADOS CSV ---
+                    dict_predicciones[model_name] = y_pred
+
+                    joblib.dump(model, os.path.join(folder_path, model_name))
                     print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
 
     # --- CASO ARBOLES DE DECISION ---
     elif method == 'tree':
         # 1. Extraemos los hiperparámetros del JSON
         params_cfg = config.get('hyperparameters_tree', {})
-        lista_depth = params_cfg.get('max_depth', [None, 5, 10]) ## valores de profundidad por defecto
+        lista_depth = params_cfg.get('max_depth', [None, 5, 10])  ## valores de profundidad por defecto
         lista_crit = params_cfg.get('criterio', ['gini', 'entropy'])
-
-        print(f"🌳 Iniciando entrenamiento de Árboles de Decisión...")
 
         # 2. Barrido de hiperparámetros
         for depth in lista_depth:
@@ -347,37 +362,40 @@ def train():
                 # 3. Ajuste según la tarea (Clasificación o Regresión)
                 if task == 'regression':
                     # En regresión, el criterio suele ser 'squared_error' o 'absolute_error'
-                    # Adaptamos 'gini'/'entropy' a algo válido para regresión si el usuario se equivoca
                     c_reg = 'squared_error' if crit == 'gini' else 'absolute_error'
-                    model = DecisionTreeRegressor(max_depth=depth, criterion=c_reg, random_state=42) #crea el modelo
-                    model.fit(X_train_p, y_train) #estudia los datos X y aprende a llegar al target Y
-                    score_dev = r2_score(y_dev, model.predict(X_dev_p)) #calcula R2 score
+                    model = DecisionTreeRegressor(max_depth=depth, criterion=c_reg,
+                                                  random_state=42)  # crea el modelo
+                    model.fit(X_train_p, y_train)  # estudia los datos X y aprende a llegar al target Y
+                    y_pred = model.predict(X_dev_p)
+                    score_dev = r2_score(y_dev, y_pred)  # calcula R2 score
                     metric = "R2"
                 else:
                     model = DecisionTreeClassifier(max_depth=depth, criterion=crit, random_state=42)
                     model.fit(X_train_p, y_train)
-                    score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                    y_pred = model.predict(X_dev_p)
+                    score_dev = f1_score(y_dev, y_pred, average=eval_strat)
                     metric = "F1"
 
                 # 4. Guardado del modelo
                 folder_path = os.path.join("modelos", csv_id, method)
                 os.makedirs(folder_path, exist_ok=True)
 
-                # Nombre descriptivo como pide tu práctica
                 params_str = f"depth={depth}_crit={crit}"
-                model_name = f"{csv_id}_{task}_tree_{params_str}.sav"
-                full_save_path = os.path.join(folder_path, model_name)
+                model_name = f"tree_{params_str}.sav"
 
-                joblib.dump(model, full_save_path)
+                # --- GUARDADO DE RESULTADOS CSV ---
+                dict_predicciones[model_name] = y_pred
+
+                joblib.dump(model, os.path.join(folder_path, model_name))
                 print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
 
     # --- CASO RANDOM FOREST ---
     elif method == 'forest':
         # 1. Extraemos los hiperparámetros del JSON
-        params_cfg = config.get('hyperparameters_rf', {})
+        params_cfg = config.get('hyperparameters_forest', {})
         lista_n_estimators = params_cfg.get('n_estimators', [50, 100])  # Número de árboles
         lista_depth = params_cfg.get('max_depth', [None, 5, 10])
-        lista_features = params_cfg.get('max_features', ['sqrt', 'log2'])  # Cuántas variables ve cada árbol, para que los arboles sean diferentes entre si
+        lista_features = params_cfg.get('max_features', ['sqrt', 'log2'])  # Cuántas variables ve cada árbol
 
         print(f"🌲🌲 Iniciando entrenamiento de Random Forest...")
 
@@ -388,16 +406,18 @@ def train():
 
                     # 3. Ajuste según la tarea
                     if task == 'regression':
-                        model = RandomForestRegressor(n_estimators=n_est, max_depth=depth,
-                                                      max_features=feat, random_state=42, n_jobs=-1)
+                        model = RandomForestRegressor(n_estimators=n_est, max_depth=depth, max_features=feat,
+                                                      random_state=42, n_jobs=-1)
                         model.fit(X_train_p, y_train)
-                        score_dev = r2_score(y_dev, model.predict(X_dev_p))
+                        y_pred = model.predict(X_dev_p)
+                        score_dev = r2_score(y_dev, y_pred)
                         metric = "R2"
                     else:
-                        model = RandomForestClassifier(n_estimators=n_est, max_depth=depth,
-                                                       max_features=feat, random_state=42, n_jobs=-1)
+                        model = RandomForestClassifier(n_estimators=n_est, max_depth=depth, max_features=feat,
+                                                       random_state=42, n_jobs=-1)
                         model.fit(X_train_p, y_train)
-                        score_dev = f1_score(y_dev, model.predict(X_dev_p), average='macro')
+                        y_pred = model.predict(X_dev_p)
+                        score_dev = f1_score(y_dev, y_pred, average=eval_strat)
                         metric = "F1"
 
                     # 4. Guardado
@@ -405,11 +425,61 @@ def train():
                     os.makedirs(folder_path, exist_ok=True)
 
                     params_str = f"n={n_est}_d={depth}_f={feat}"
-                    model_name = f"{csv_id}_{task}_rf_{params_str}.sav"
-                    full_save_path = os.path.join(folder_path, model_name)
+                    model_name = f"forest_{params_str}.sav"
 
-                    joblib.dump(model, full_save_path)
+                    # --- GUARDADO DE RESULTADOS CSV ---
+                    dict_predicciones[model_name] = y_pred
+
+                    joblib.dump(model, os.path.join(folder_path, model_name))
                     print(f"✅ Guardado: {model_name} | {metric}-Dev: {score_dev:.4f}")
+
+    # --- SELECCIÓN DEL MEJOR MODELO DEL ENTRENAMIENTO ---
+    import glob
+
+    # Buscamos todos los modelos que acabamos de guardar en la carpeta del metodo
+    model_files = glob.glob(os.path.join(folder_path, "*.sav"))
+    best_model_path = None
+    max_score = -1
+
+    # Pequeño truco: como no queremos re-entrenar, leemos los resultados que imprimimos antes
+    # O mejor, cargamos cada uno y probamos rápido en Dev
+    for m_path in model_files:
+        tmp_model = joblib.load(m_path)
+        y_pred = tmp_model.predict(X_dev_p)
+
+        if task == 'regression':
+            current_score = r2_score(y_dev, y_pred)
+        else:
+            current_score = f1_score(y_dev, y_pred, average=eval_strat)
+
+        if current_score > max_score:
+            max_score = current_score
+            best_model_path = m_path
+
+    # Guardamos el "Ganador" en una carpeta de modelos finales
+    if best_model_path:
+        final_folder = "modelos_finales"
+        os.makedirs(final_folder, exist_ok=True)
+
+        # Nombre limpio para el modelo final
+        final_name = f"MEJOR_{method}_{csv_id}.sav"
+        final_path = os.path.join(final_folder, final_name)
+
+        # Copiamos el modelo ganador
+        joblib.dump(joblib.load(best_model_path), final_path)
+        print(f"\n⭐ EL MEJOR MODELO PARA DEV ES: {os.path.basename(best_model_path)}")
+        print(f"⭐ PUNTUACIÓN EN DEV: {max_score:.4f}")
+        print(f"⭐ GUARDADO EN: {final_path}")
+
+    # --- GENERACIÓN DEL CSV UNIFICADO DE PREDICCIONES ---
+    df_predicciones_final = pd.DataFrame(dict_predicciones)
+    ruta_unificada = os.path.join("csv", csv_id, f"comparativa_predicciones_{method}.csv")
+    df_predicciones_final.to_csv(ruta_unificada, index=False)
+
+    print("\n" + "📊 " * 10)
+    print(f"TABLA UNIFICADA CREADA: {ruta_unificada}")
+    print("📊 " * 10 + "\n")
+
 
 if __name__ == "__main__":
     train()

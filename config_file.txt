@@ -2,10 +2,12 @@
     "target": "nombre_columna",     //columna a predecir
     "method": "knn",                //knn,tree,bayes,forest
     "task": "classification",       //clasificación o regresión
+    "evaluation": "macro",          //macro o micro
     "hyperparameters_knn":{         //hiperparametros de knn: k = {1,2,3,4,5,...}, p = 0/1, w = 0/1
         "n_neighbors": [1, 3, 5],   // IMPORTANTE: Aquí se pone un limite maximo y minimo
         "p": [1, 2],
-        "weights": ["uniform", "distance"]
+        "weights": ["uniform", "distance"],
+        "step": 2                   //Va de 2 en 2, o el numero que sea
     },
     "hyperparameters_tree":{
         "max_depth": [3, 5, 10],
@@ -16,13 +18,18 @@
         // con los datos que se alejan mucho de la media (evita divisiones por cero).
         "var_smoothing": [1e-9, 1e-8, 1e-7, 1e-5],
 
-        // Tipo de algoritmo: 'multinomial' es ideal cuando discretizamos
-        // o usamos frecuencias de palabras (como en nuestro caso).
-        "bayes_type": "multinomial",
+        // Tipo de algoritmo: 'multinomial' es ideal cuando discretizamos (no se puede usar z-score)
+        // o usamos frecuencias de palabras.
+        "bayes_type": "multinomial",    //multinomial,bernoulli,gaussian,none
 
         // Parámetro Alpha: Es el 'Suavizado de Laplace'.
         // Suma un pequeño valor a los conteos para que ninguna probabilidad sea 0%.
         "alpha": [0.1, 0.5, 1.0, 2.0]
+    },
+    "hyperparameters_forest":{
+        "n_estimators": [50, 100, 200],
+        "max_depth": [3, 5, 10],
+        "max_features": ["sqrt", "log2"]
     },
     "preprocessing":{
         "categorical_features":[], //columnas categoriales: pasar a numeros
