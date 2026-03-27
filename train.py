@@ -308,7 +308,7 @@ def train():
         params_cfg = config.get('hyperparameters_knn', {})
 
         # .get(clave, valor_por_defecto)
-        k_min, k_max = params_cfg.get('n_neighbors', [1, 5])  # IMPORTANTE: Aquí se pone un limite maximo y minimo
+        k_min, k_max = params_cfg.get('k_range', [1, 5])  # IMPORTANTE: Aquí se pone un limite maximo y minimo
         lista_p = params_cfg.get('p', [1, 2])
         lista_w = params_cfg.get('weights', ["uniform", "distance"])
         step = params_cfg.get('step', 2)  # Va de 2 en 2, o el numero que sea
