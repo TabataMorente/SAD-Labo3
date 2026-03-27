@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 # Importamos las funciones de utilidad desde tu script train.py
 # Esto asegura que la carga y el preprocesamiento sean idénticos en ambos procesos
 from train import load_data, load_config, apply_preprocessing
+from sklearn.preprocessing import LabelEncoder
 
 
 def evaluar_mejor_modelo():
@@ -77,7 +78,8 @@ def evaluar_mejor_modelo():
 
     # --- 4. TRATAMIENTO DE ETIQUETAS Y MÉTRICAS ---
     # Mapa para convertir etiquetas de texto ('si'/'no') a números (1/0) para cálculos matemáticos
-    mapeo = {'no': 0, 'si': 1, '0': 0, '1': 1}
+    #CAMBIAR EL MAPA SEGUN LO QUE HAYA QUE CLASIFICAR
+    mapeo = {'no': 0, 'si': 1, '0': 0, '1': 1,'spam':1,'ham':0}
 
     # Aplicamos el mapeo de forma segura usando Series de Pandas
     y_test_ser = pd.Series(y_test_final).astype(str).str.lower().map(mapeo)

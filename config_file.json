@@ -1,5 +1,5 @@
 {
-    "target": "compro",
+    "target": "v1",
     "method": "knn",
     "task": "classification",
     "evaluation": "macro",
@@ -24,15 +24,15 @@
         "max_features": ["sqrt", "log2"]
     },
     "preprocessing":{
-        "categorical_features":["producto","metodo_pago"],
-        "text_features": ["opinion_cliente"],
-        "boolean_features": ["descuento"],
+        "categorical_features":[],
+        "text_features": ["v2"],
+        "boolean_features": [],
         "missing_values": "impute",
         "impute_strategy": "mean",
         "discretize_features": [],
         "discretize_bins": 3,
         "scaling": "max-min",
         "text_process": "tf-idf",
-        "sampling": "oversampling"
+        "sampling": "none"
     }
 }

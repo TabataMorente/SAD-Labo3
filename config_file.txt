@@ -4,7 +4,7 @@
     "task": "classification",       //clasificación o regresión
     "evaluation": "macro",          //macro o micro
     "hyperparameters_knn":{         //hiperparametros de knn: k = {1,2,3,4,5,...}, p = 0/1, w = 0/1
-        "n_neighbors": [1, 3, 5],   // IMPORTANTE: Aquí se pone un limite maximo y minimo
+        "k_range": [1, 3],   // IMPORTANTE: Aquí se pone un limite maximo y minimo
         "p": [1, 2],
         "weights": ["uniform", "distance"],
         "step": 2                   //Va de 2 en 2, o el numero que sea
