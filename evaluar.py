@@ -76,27 +76,28 @@ def evaluar_mejor_modelo():
     modelo = joblib.load(ruta_modelo)
     y_pred = modelo.predict(X_test_p)
 
-    # --- 4. TRATAMIENTO DE ETIQUETAS Y MÉTRICAS ---
-    # Mapa para convertir etiquetas de texto ('si'/'no') a números (1/0) para cálculos matemáticos
-    #CAMBIAR EL MAPA SEGUN LO QUE HAYA QUE CLASIFICAR
-    mapeo = {'no': 0, 'si': 1, '0': 0, '1': 1,'spam':1,'ham':0}
+    # --- 4. MÉTRICAS Y MAPEOS UNIVERSALES (CON LABEL ENCODER) ---
+    from sklearn.preprocessing import LabelEncoder
+    le = LabelEncoder()
 
-    # Aplicamos el mapeo de forma segura usando Series de Pandas
-    y_test_ser = pd.Series(y_test_final).astype(str).str.lower().map(mapeo)
-    y_pred_ser = pd.Series(y_pred).astype(str).str.lower().map(mapeo)
+    # 1. Convertimos la REALIDAD a números (ajustándose a lo que haya en el test)
+    y_test_num = le.fit_transform(y_test_final)
 
-    # Rellenamos nulos en caso de que los datos originales ya fueran numéricos
-    y_test_num = y_test_ser.fillna(pd.Series(y_test_final)).values
-    y_pred_num = y_pred_ser.fillna(pd.Series(y_pred)).values
+    # 2. Convertimos la PREDICCIÓN
+    # Si el modelo ya devuelve números, lo dejamos. Si devuelve texto, lo mapeamos.
+    if y_pred.dtype == 'object' or isinstance(y_pred[0], str):
+        y_pred_num = le.transform(y_pred)
+    else:
+        y_pred_num = y_pred
 
-    # Obtenemos la estrategia de evaluación (macro o micro) desde el archivo JSON
+    # Leemos la estrategia de evaluación (macro/micro)
     eval_strat = config.get('evaluation', 'macro')
 
-    # Evaluamos según si la tarea es Regresión (R2) o Clasificación (F1)
     if task == 'regression':
         score = r2_score(y_test_num, y_pred_num)
         print(f" ✅ RESULTADO FINAL (R2-Score): {score:.4f}")
     else:
+        # Ahora ambos son arrays de números (int), no habrá Mix of label types
         score = f1_score(y_test_num, y_pred_num, average=eval_strat)
         print(f" ✅ RESULTADO FINAL (F1-Score {eval_strat}): {score:.4f}")
 

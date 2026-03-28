@@ -4,7 +4,7 @@
     "task": "classification",
     "evaluation": "macro",
     "hyperparameters_knn":{
-        "k_range": [1, 9],
+        "k_range": [1, 3],
         "p": [1, 2],
         "weights": ["uniform", "distance"],
         "step": 2
