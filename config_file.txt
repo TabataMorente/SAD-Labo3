@@ -10,8 +10,8 @@
         "step": 2                   //Va de 2 en 2, o el numero que sea
     },
     "hyperparameters_tree":{
-        "max_depth": [3, 5, 10],
-        "criterio": ["gini", "entropy"]
+        "max_depth": [3, 5, 10], // Profundidad maxima del arbol.
+        "criterio": ["gini", "entropy"] // gini o entropy
     },
     "hyperparameters_bayes": {
         // Suavizado de varianza: Ayuda al modelo GaussianNB a no ser tan rígido
@@ -27,8 +27,11 @@
         "alpha": [0.1, 0.5, 1.0, 2.0]
     },
     "hyperparameters_forest":{
-        "n_estimators": [50, 100, 200],
-        "max_depth": [3, 5, 10],
+        "n_estimators": [50, 100, 200], // Numero de arboles que tendra el bosque
+        "max_depth": [3, 5, 10], // Profundidad maxima del arbol
+
+        // Muestra cuantas variables/columnas se le muestran a cada arbol al azar.
+        // Para que cada arbol sea distinto entre si.
         "max_features": ["sqrt", "log2"]
     },
     "preprocessing":{
