@@ -181,9 +181,16 @@ def apply_preprocessing(X_train, X_dev, X_test, config):
         scaler = None
 
     # Ajustamos el escalador con TRAIN y transformamos los tres conjuntos
-    X_train_final = scaler.fit_transform(train_df)
-    X_dev_final = scaler.transform(dev_df)
-    X_test_final = scaler.transform(test_df)
+    if scaler is not None:
+        # Si hay un escalador configurado, escalamos los datos
+        X_train_final = scaler.fit_transform(train_df)
+        X_dev_final = scaler.transform(dev_df)
+        X_test_final = scaler.transform(test_df)
+    else:
+        # Si no queremos escalar (scaler es None), dejamos los datos igual
+        X_train_final = train_df.copy()
+        X_dev_final = dev_df.copy()
+        X_test_final = test_df.copy()
 
     return X_train_final, X_dev_final, X_test_final
 
